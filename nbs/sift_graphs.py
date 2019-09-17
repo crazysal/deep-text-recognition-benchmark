@@ -126,12 +126,18 @@ def is_edge(nodes, a, b, dthreshold=100, nthreshold=1):
     # print("is edge", dist, isit)
     return isit
     
+def generate_graph_txt(img, graph, save_dir="../demo_graphs/"):
+    assert(len(img) == len(graph))
+    for i in img:
+        file_name = os.path.join(save_dir, i)
+        with open(file_name, "wb") as f:
+            f.write()
 
 
 
 def main():
-    # img_dir = "/home/sahmed9/Documents/reps/deep-text-recognition-benchmark/demo_image/"
-    img_dir = "/home/sahmed9/Documents/data/kenny_data_share/images_png/aa/"
+    img_dir = "/home/sahmed9/Documents/reps/deep-text-recognition-benchmark/demo_image/"
+    # img_dir = "/home/sahmed9/Documents/data/kenny_data_share/images_png/aa/"
     imgs = get_rois(img_dir)
     print("Imgs got  :", len(imgs))
     # kps = []
@@ -151,7 +157,7 @@ def main():
         print("Edges", len(edges))   
         graphs.append((nodes, edges, descs)) 
 
-        if po>= 5:
+        if po>= 1:
             break;
 
     print(len(graphs[0][0]), len(graphs[0][1]), len(graphs[0][2]))

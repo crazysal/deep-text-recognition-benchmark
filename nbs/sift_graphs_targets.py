@@ -222,69 +222,71 @@ def main():
     # img_dir = "/home/sahmed9/Documents/data/kenny_data_share/images_png/aa/"
     data_root = "/run/user/1001/gvfs/sftp:host=alice.cedar.buffalo.edu/data/lmdb/data_lmdb_release/training/MJ"
     # folder = ["MJ_test", "MJ_train", "MJ_valid"]
-    folder = ["MJ_train"]
+    folder = ["MJ_valid/MJ_valid_label"]
+    folder = ["MJ_train/MJ_train_label"]
     po = 0
-    for diri in tqdm(folder) :
+    for diri in folder :
         graphs_cache = {}
         img_dir = os.path.join(data_root, diri)
-        env = lmdb.open(img_dir, max_readers=32, readonly=True, lock=False, readahead=False, meminit=False)
         os.makedirs(os.path.join("./", diri), exist_ok=True)
         outputPath = os.path.join("./", diri)
         env2 = lmdb.open(outputPath, map_size=1099511627776)
-        file_len = 0 
-        with env.begin() as txn:
-            key = 'num-samples'.encode()
-            file_len = int(txn.get(key).decode('utf-8'))
-        print("Loaded from dir", img_dir)
-        print(file_len)
+        file_len = 37000
+        print("Loading from dir", img_dir)
+        # exit()
+        # file_len = 0 
+        # s = os.listdir(img_dir)
+        # s.sort()
+        # file_len = len(s) 
+        # print("Total", file_len, "from", s[0], "to", s[-1])
 
-        for i in tqdm(range(33001, file_len)):
+        for i in tqdm(range(1, file_len)):
             try:
-                with env.begin(write=False) as txn: 
-                    img_key = 'image-%09d'.encode() % i
-                    graph_key = 'graph-%09d'.encode() % i
-                    node_key = 'nodes-%09d'.encode() % i
-                    
-                    imgbuf = txn.get(img_key)
-                    buf = six.BytesIO()
-                    buf.write(imgbuf)
-                    buf.seek(0)
-                    img = np.array(Image.open(buf).convert('RGB') )
-                    imgh, imgw , _= np.shape(img)
-                    if imgh * imgw <100 :
-                        print("\nafter buffer", type(img), np.shape(img))
-                        pass
-                    else :
-                        kps, descs = make_sift(img)
-                        # kps.append(kp)
-                        # descs.append(desc)
-                        nodes = {}
-                        for i1, kp in enumerate(kps) :
-                            # node_type = get_nd_tp(kp.angle) 
-                            # print(kp.pt[0], kp.pt[1], kp.angle, kp.size)
-                            nodes[i1] = (kp.pt[0], kp.pt[1], kp.angle, kp.size)
-                            # nodes[i] = (round(kp.pt[0]), round(kp.pt[1]), kp.angle, kp.size)
-                            # nodes[i] = (kp.pt[0], kp.pt[1], node_type)
-                            # nodes[i] = (round(kp.pt[0]), round(kp.pt[1]), node_type)
-                        # print("NODES", len(nodes))    
-                        edges = generate_graph(nodes, img)
-                        # print("Edges", len(edges))
-                        graph = (nodes, edges, descs)   
-                        graphs_cache[graph_key], graphs_cache[node_key]  = save_graph_text(graph)
-                        # print(graphs_cache)
-                        try:
-                            if i % 1000 == 0:
-                                writeCache(env2, graphs_cache)
-                                # exit()
-                                graphs_cache = {}
-                                print('Written %d / %d' % (i, file_len))
-                            # graphs.append((nodes, edges, descs, im_nm))
-                        except Exception as e:
-                            print("exception occured in writeCache", e)
-                            print("cache", len(graphs_cache))
-                            continue
-                        # print("DONE EXIT NOW") 
-                        # exit()
+                img_key = 'image-%09d'.encode() % i
+                label_key = 'label-%09d' % i + '.png'
+                graph_key = 'graph-%09d'.encode() % i
+                node_key = 'nodes-%09d'.encode() % i
+
+                img = cv2.imread(os.path.join(img_dir, label_key))
+                imgh, imgw , _ =  np.shape(img)
+                # print("img shape", np.shape(img))
+
+                if imgh * imgw <100 :
+                    print("\nafter buffer", type(img), np.shape(img))
+                    pass
+                else :
+                    kps, descs = make_sift(img)
+                    # kps.append(kp)
+                    # descs.append(desc)
+                    nodes = {}
+                    for i1, kp in enumerate(kps) :
+                        # node_type = get_nd_tp(kp.angle) 
+                        # print(kp.pt[0], kp.pt[1], kp.angle, kp.size)
+                        # nodes[i1] = (kp.pt[0], kp.pt[1], kp.angle, kp.size)
+                        nodes[i1] = (round(kp.pt[0]), round(kp.pt[1]), kp.angle, kp.size)
+                        # nodes[i1] = (kp.pt[0], kp.pt[1], node_type)
+                        # nodes[i1] = (round(kp.pt[0]), round(kp.pt[1]), node_type)
+                    # print("NODES", len(nodes))    
+                    edges = generate_graph(nodes, img)
+                    # print("Edges", len(edges))
+                    graph = (nodes, edges, descs)   
+                    graphs_cache[graph_key], graphs_cache[node_key]  = save_graph_text(graph)
+                    # print(graphs_cache)
+                    # exit()
+                    try:
+                        if i % 1000 == 0:
+                            writeCache(env2, graphs_cache)
+                            # exit()
+                            graphs_cache = {}
+                            print('Written %d / %d' % (i, file_len))
+                        # graphs.append((nodes, edges, descs, im_nm))
+                    except Exception as e:
+                        print("exception occured in writeCache", e)
+                        print("cache", len(graphs_cache))
+                        continue
+                    # print("DONE EXIT NOW") 
+                    # exit()
+    
             except Exception as e :
                 print("exception occured in sift/generate_graph", e)
                 print("cache", len(graphs_cache))

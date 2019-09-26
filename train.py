@@ -64,7 +64,8 @@ def train(opt):
             continue
 
     # data parallel for multi-GPU
-    model = torch.nn.DataParallel(model).to(device)
+    # model = torch.nn.DataParallel(model).to(device)
+    model = model.to(device)
     model.train()
     if opt.continue_model != '':
         print(f'loading pretrained model from {opt.continue_model}')
@@ -125,7 +126,7 @@ def train(opt):
         image = image_tensors.to(device)
         text, length = converter.encode(labels, batch_max_length=opt.batch_max_length)
         batch_size = image.size(0)
-
+        print("text, length \n", text, length )    
         if 'CTC' in opt.Prediction:
             preds = model(image, text).log_softmax(2)
             preds_size = torch.IntTensor([preds.size(1)] * batch_size).to(device)
@@ -134,12 +135,14 @@ def train(opt):
             # To avoid ctc_loss issue, disabled cudnn for the computation of the ctc_loss
             # https://github.com/jpuigcerver/PyLaia/issues/16
             torch.backends.cudnn.enabled = False
+            print("ctc cost .nn.CTCLoss inputs \n preds, text, preds_size, length\n ", preds.shape, text.shape, np.shape(preds_size),preds_size, np.shape(length), length)
             cost = criterion(preds, text, preds_size, length)
             torch.backends.cudnn.enabled = True
 
         else:
             preds = model(image, text[:, :-1]) # align with Attention.forward
             target = text[:, 1:]  # without [GO] Symbol
+            print("attn cost nn.CrossEntropyLoss inputs \n preds, target\n ", preds.view(-1, preds.shape[-1]).shape, target.contiguous().view(-1).shape)
             cost = criterion(preds.view(-1, preds.shape[-1]), target.contiguous().view(-1))
 
         model.zero_grad()
@@ -265,7 +268,7 @@ if __name__ == '__main__':
     cudnn.benchmark = True
     cudnn.deterministic = True
     opt.num_gpu = torch.cuda.device_count()
-    # print('device count', opt.num_gpu)
+    print('device count', opt.num_gpu)
     if opt.num_gpu > 1:
         print('------ Use multi-GPU setting ------')
         print('if you stuck too long time with multi-GPU setting, try to set --workers 0')

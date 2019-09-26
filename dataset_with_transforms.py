@@ -115,6 +115,7 @@ class LmdbDataset(Dataset):
         self.root = root
         self.opt = opt
         self.env = lmdb.open(root, max_readers=32, readonly=True, lock=False, readahead=False, meminit=False)
+        print("in LMBDB CLASSS", root)
         if not self.env:
             print('cannot create lmdb from %s' % (root))
             sys.exit(0)
@@ -187,6 +188,10 @@ class LmdbDataset(Dataset):
             out_of_char = f'[^{self.opt.character}]'
             label = re.sub(out_of_char, '', label)
 
+        if self.data_transform :
+                img = self.data_transform(img)    
+        if self.target_transform :
+                label = self.data_transform(label)    
         return (img, label)
 
 

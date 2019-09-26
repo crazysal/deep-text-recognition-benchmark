@@ -1,10 +1,15 @@
 ## Get Roi in model for now toy images 
 import os
 import cv2
+import six
 import numpy as np
-import matplotlib 
+# import matplotlib 
 import math
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
+import lmdb 
+from tqdm import tqdm 
+
+from target_transform_txt2img import render_img
 
 def get_rois(img_dir, show=False):
     demo_imgs_name = os.listdir(img_dir)
@@ -135,32 +140,57 @@ def generate_graph_txt(img, graph, save_dir="../demo_graphs/"):
 
 
 
-def main():
-    img_dir = "/home/sahmed9/Documents/reps/deep-text-recognition-benchmark/demo_image/"
-    # img_dir = "/home/sahmed9/Documents/data/kenny_data_share/images_png/aa/"
-    imgs = get_rois(img_dir)
-    print("Imgs got  :", len(imgs))
-    # kps = []
-    # descs = []
-    graphs = []
-    # po = 5
-    for po, im in enumerate(imgs) :
-        kps, descs = make_sift(im)
-        # kps.append(kp)
-        # descs.append(desc)
-        nodes = {}
-        for i, kp in enumerate(kps) : 
-            # nodes[i] = kp.pt
-            nodes[i] = (round(kp.pt[0]), round(kp.pt[1]))
-        print("NODES", len(nodes))    
-        edges = generate_graph(nodes, im)
-        print("Edges", len(edges))   
-        graphs.append((nodes, edges, descs)) 
+def main(is_local=False):
+    if is_local:
+        # img_dir = "/home/sahmed9/Documents/data/kenny_data_share/images_png/aa/"
+        # img_dir = "/home/sahmed9/Documents/reps/deep-text-recognition-benchmark/demo_image/"
+        img_dir = "/home/sahmed9/Documents/reps/deep-text-recognition-benchmark/demo_image/"
+        data_root = "/run/user/1001/gvfs/sftp:host=alice.cedar.buffalo.edu/data/lmdb/data_lmdb_release/training/MJ"
+        imgs = get_rois(img_dir)
+        print("Imgs got  :", len(imgs))
+        # kps = []
+        # descs = []
+        graphs = []
+        # po = 5
+        for po, im in enumerate(imgs) :
+            kps, descs = make_sift(im)
+            # kps.append(kp)
+            # descs.append(desc)
+            nodes = {}
+            for i, kp in enumerate(kps) : 
+                # nodes[i] = kp.pt
+                nodes[i] = (round(kp.pt[0]), round(kp.pt[1]))
+            print("NODES", len(nodes))    
+            edges = generate_graph(nodes, im)
+            print("Edges", len(edges))   
+            graphs.append((nodes, edges, descs)) 
 
-        if po>= 1:
-            break;
+            if po>= 1:
+                break;
 
-    print(len(graphs[0][0]), len(graphs[0][1]), len(graphs[0][2]))
+        print(len(graphs[0][0]), len(graphs[0][1]), len(graphs[0][2]))
+    else :    
+        img_dir = "/data/lmdb/data_lmdb_release/training/MJ/MJ_test"
+        env = lmdb.open(img_dir, max_readers=32, readonly=True, lock=False, readahead=False, meminit=False)
+        file_len = 0 
+        with env.begin() as txn:
+            key = 'num-samples'.encode()
+            file_len = int(txn.get(key).decode('utf-8'))
+        print("Loaded from dir", img_dir)
+        print(file_len)    
+        for i in tqdm(range(1, file_len)):
+            with env.begin(write=False) as txn:
+                label_key = 'label-%09d'.encode() % i
+                # print("label_key", label_key)
+                label = txn.get(label_key).decode('utf-8')    
+                img_of_lbl = render_img(label)
+                img_of_lbl.save(img_dir+'/'+label_key.decode()+'.png')
+
+            # if i >5 : 
+            #     break;
+
 
 if __name__ == '__main__':
-    main()
+    parser.add_argument('--local', type=bool, default=False, help='True=chort or False=alice')
+    opt = parser.parse_args()
+    main(opt.local)

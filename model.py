@@ -74,19 +74,23 @@ class Model(nn.Module):
 
         """ Feature extraction stage """
         visual_feature = self.FeatureExtraction(input)
+        print("visual_feature extractor --->>", visual_feature.shape)
         visual_feature = self.AdaptiveAvgPool(visual_feature.permute(0, 3, 1, 2))  # [b, c, h, w] -> [b, w, c, h]
+        print("visual_feature pool nd permute 0312--->>", visual_feature.shape)
         visual_feature = visual_feature.squeeze(3)
+        print("visual_feature squeeze--->>", visual_feature.shape)
 
         """ Sequence modeling stage """
         if self.stages['Seq'] == 'BiLSTM':
             contextual_feature = self.SequenceModeling(visual_feature)
         else:
             contextual_feature = visual_feature  # for convenience. this is NOT contextually modeled by BiLSTM
-
+        print("contextual_feature --->>", contextual_feature.shape)
         """ Prediction stage """
         if self.stages['Pred'] == 'CTC':
             prediction = self.Prediction(contextual_feature.contiguous())
         else:
             prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=self.opt.batch_max_length)
 
+        print("Prediction --->>", prediction.shape)
         return prediction

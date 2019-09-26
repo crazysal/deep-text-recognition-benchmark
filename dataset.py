@@ -91,17 +91,18 @@ def hierarchical_dataset(root, opt, select_data='/'):
     dataset_list = []
     print(f'dataset_root:    {root}\t dataset: {select_data[0]}')
     for dirpath, dirnames, filenames in os.walk(root+'/'):
-        if not dirnames:
-            select_flag = False
-            for selected_d in select_data:
-                if selected_d in dirpath:
-                    select_flag = True
-                    break
+      if dirpath !='/data/lmdb/data_lmdb_release/training/MJ/MJ_valid/MJ_valid_label' and dirpath !='/data/lmdb/data_lmdb_release/training/MJ/MJ_train/MJ_train_label': 
+          if not dirnames:
+              select_flag = False
+              for selected_d in select_data:
+                  if selected_d in dirpath:
+                      select_flag = True
+                      break
 
-            if select_flag:
-                dataset = LmdbDataset(dirpath, opt)
-                print(f'sub-directory:\t/{os.path.relpath(dirpath, root)}\t num samples: {len(dataset)}')
-                dataset_list.append(dataset)
+              if select_flag:
+                  dataset = LmdbDataset(dirpath, opt)
+                  print(f'sub-directory:\t/{os.path.relpath(dirpath, root)}\t num samples: {len(dataset)}')
+                  dataset_list.append(dataset)
 
     concatenated_dataset = ConcatDataset(dataset_list)
 
@@ -115,9 +116,7 @@ class LmdbDataset(Dataset):
         self.root = root
         self.opt = opt
         self.env = lmdb.open(root, max_readers=32, readonly=True, lock=False, readahead=False, meminit=False)
-        print("***********************************************", self.env)
-        print(root)
-        print(retete)
+        
         if not self.env:
             print('cannot create lmdb from %s' % (root))
             sys.exit(0)
